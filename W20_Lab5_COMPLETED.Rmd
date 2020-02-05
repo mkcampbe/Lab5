@@ -1,0 +1,386 @@
+---
+title: 'Lab 5: Intro to statistics, part 2'
+author: "Mary Kate Campbell"
+date: "02/05/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "~/Documents/UMBio201/Lab5/")
+```
+
+# Load packages
+```{r Load packages, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+library(tidyverse)
+library(readxl)
+library(broom)
+library(agricolae)
+library(cowplot)
+set.seed(7)
+```
+
+# Introduction
+
+This week we are continuing our statistics module. In Lab 3 we learned which test(s) to use when the data set belongs to the first combination of data families in the list below. Today we will cover the other three options. 
+
+* one continuous and one categorical variable (t-test, paired t-test, wilcoxon)
+* one continuous and multiple categorical variables 
+* two continuous variables 
+* two categorical variables 
+
+In the last statistics module, we started working toward answering the question: "Does consumption of a pre-biotic fiber supplement alter the gut microbiome?" Remember there are multiple layers to answering this question:
+
+* change in microbial fermentation products (SCFAs, breath gases)
+* change in environment due to production of fermentation products (pH, bristol score)
+* change in microbial community composition and/or microbial diversity 
+* correlations between fermentation products and the microbiota 
+
+We used t-tests to determine if the mean changed between two groups. We can use correlations and proportion tests to also make conclusions about how microbes (and fermentation) change in response to a fiber supplement. 
+
+```{r include=FALSE}
+lab5_df <- read_delim(file = "raw_data/Lab5_data.txt", 
+                      delim = "\t", escape_double = FALSE, 
+                      trim_ws = TRUE, na=c("NA"),
+                      col_names = TRUE, 
+                      col_types = cols(participant_id = col_character(),
+                                       study_week = col_character(),
+                                       semester = col_character(),
+                                       supplement_consumed = col_character(),
+                                       quantity_compliant = col_character(),
+                                       frequency = col_character(),
+                                       pH_median = col_double(),
+                                       pH_mean = col_double(),
+                                       bristol_median = col_double(),
+                                       bristol_mean = col_double(),
+                                       blood_glucose_median = col_double(),
+                                       blood_glucose_mean = col_double(),
+                                       acetate_median = col_double(),
+                                       acetate_mean = col_double(),
+                                       butyrate_median = col_double(),
+                                       butyrate_mean = col_double(),
+                                       propionate_median = col_double(),
+                                       propionate_mean = col_double())) %>%
+  select(-ends_with("_median")) %>%
+  filter(semester != "Winter2015",
+         quantity_compliant != "no")
+```
+
+```{r include=FALSE}
+scfa_wide <- read_delim(file = "raw_data/scfa_wide.txt", 
+                        delim = "\t", escape_double = FALSE, 
+                        trim_ws = TRUE, na=c("NA"),
+                        col_names = TRUE,
+                        col_types = cols(participant_id = col_character(),
+                                         semester = col_character(),
+                                         supplement_consumed = col_character(),
+                                         quantity_compliant = col_character(),
+                                         frequency = col_character(),
+                                         acetate_delta = col_double(),
+                                         butyrate_delta = col_double(),
+                                         propionate_delta = col_double())) %>%
+  filter(semester != "Winter2015",
+         quantity_compliant != "no")
+```
+
+
+# 1 continuous and multiple categorical variables 
+
+In Lab 3 we discussed the factors influencing data structure (values, sample size, variance, etc.), how to check assumptions for certain statistical tests, how to determine if the differences between two means are likely real, and what to do if your datset does not meet the assumptions when comparing two means (use non-parametric test). 
+
+In the first portion of the lab today we will learn the assumption checking process for comparison of more than 2 means. Then use this information to decide if you will use the parametric (ANOVA) or non-pararmetric (Kruskall-Wallace) test, and learn what to do if either of these tests has a significant result.
+
+### ANOVA
+
+As you know, we have more than two starch groups we would like to analyze, last week we focused on one (BRMPS). Instead of doing multiple pairwise comparisons with t-tests (which isn't the best approach because of reasons...) we use an ANOVA, which compares all categorical groups to one another. 
+
+To illustrate when an ANOVA would be useful, use the `Lab5_df` data frame imported above, plot the delta butyrate vs. supplement type. Instead of plotting a week 1 and week 3 value for each participant, these were used to calculate a change in butyrate concentration ([butyrate week3] - [butyrate week 1]) for each participant. We can then compare the delta butyrate for all the supplements. Those supplements which caused a large positive change in butyrate concentration can be determined to be effective at stimulating microbial fermentation. 
+```{r}
+scfa_plot <- scfa_wide %>%
+  ggplot(aes(x = supplement_consumed,
+             y = butyrate_delta,
+             color = supplement_consumed)) +
+# geom_hline adds a horitzonal line which makes it easy to quickly see which supplements had a positive or negative influence on the concentration
+  geom_hline(yintercept = 0,
+             linetype = "dashed") + 
+  geom_violin() + #add violion plots over top the hline annotation
+  geom_jitter() + # add jitter points overtop of the violin 
+  xlab(NULL) + #hide x-axis label 
+  ylab("Butyrate mmol/kg (wk3 - wk1)") + 
+  theme(legend.position = "none", #hide legend, not adding anything we can't determine from axis labels
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) #rotate x-axis tick mark labels
+
+scfa_plot 
+```
+
+### Check assumptions
+
+As with the t-tests, there are assumptions to check before running an ANOVA. They are the same as for a t-test, except there are more groups. Importantly, dealing with the variance assumption is different, if this is violated you *cannot* use an ANOVA, you must you the non-parametric alternative. 
+```{r}
+# check sample sizes
+scfa_wide %>%
+  group_by(supplement_consumed) %>%
+  summarise(sample_size = n())
+
+
+```
+
+Divide the labor with your neighbors and run the normality check on each of the 12 supplements. The first few have been completed as an example.
+```{r}
+# check normality of each group 
+s1 <- scfa_wide %>%
+  filter(supplement_consumed == "Accessible") 
+shapiro.test(s1$butyrate_delta) #p-value = 0.7185
+
+s2 <- scfa_wide %>%
+  filter(supplement_consumed == "Arabino") 
+shapiro.test(s2$butyrate_delta) #p-value = 0.07012
+
+s3 <- scfa_wide %>%
+  filter(supplement_consumed == "BRMPS+Accessible")
+shapiro.test(s3$butyrate_delta) #p-value = 0.003263
+
+s4 <- scfa_wide %>%
+  filter(supplement_consumed == "HiMaize") 
+shapiro.test(s4$butyrate_delta) #p-value = 0.5398
+
+s5 <- scfa_wide %>%
+  filter(supplement_consumed == "HiMaize+BRMPS") 
+shapiro.test(s5$butyrate_delta) #p-value = 0.2767
+
+s6 <- scfa_wide %>%
+  filter(supplement_consumed == "Inulin") 
+shapiro.test(s6$butyrate_delta) #p-value = 0.8136
+
+s7 <- scfa_wide %>% 
+  filter(supplement_consumed == "LOODAT")
+shapiro.test(s7$butyrate_delta) #p-value = 0.8874
+
+s8 <- scfa_wide %>% 
+  filter(supplement_consumed == "none")
+shapiro.test(s8$butyrate_delta) #p-value = 0.09554
+
+s9 <- scfa_wide %>% 
+  filter(supplement_consumed == "Psyllium") 
+shapiro.test(s9$butyrate_delta) #p-value = 0.7444
+
+s10 <- scfa_wide %>% 
+  filter(supplement_consumed == "Psyllium+BRMPS")
+shapiro.test(s10$butyrate_delta) #p-value = 0.4779
+
+s11 <- scfa_wide %>% 
+  filter(supplement_consumed == "transition_HiMaize")
+shapiro.test(s11$butyrate_delta) #p-value = 0.01764
+```
+
+```{r}
+# check variances 
+bartlett.test(butyrate_delta ~ supplement_consumed, data = scfa_wide)
+# enter arguments with the following formula: continuous ~ categorical 
+```
+
+*If* our assumptions were reasonably met, we could run the ANOVA test: 
+```{r}
+# don't run an anova because our variances were not equal
+aov_results <- aov(butyrate_delta ~ supplement_consumed, data = scfa_wide)
+summary(aov_results)
+```
+
+If the ANOVA results in a small p-value, this means at least one of the groups is significantly different from the others. To identify which group is different we have to run a pos-hoc test (an additional test). We will use Tukey's Honestly Significant Difference (HSD). The code below is an example, however based on our assumption checking the ANOVA+Tukey are not appropriate for this data set. 
+```{r}
+# conduct Tukey's HSD test 
+tuk_delta <- tidy(TukeyHSD(aov_results)) %>%
+  mutate(adj.p.value = round(adj.p.value, digits = 2)) %>% #round resulting p-values
+  filter(adj.p.value <= 0.10) #filter Tukey output for significant results 
+
+# save data frame of results to file 
+write_delim(tuk_delta, path = "curated_data/tukey_result_butyrate_delta.txt",
+            delim = "\t", col_names = TRUE, quote = FALSE)
+```
+The table generated from the TukeyHSD result in the code above will list all combinations of significant results (<= 0.10). If you are interested in the non-significant p-values, just remove the filter() step above.
+
+### Kruskall-Wallace
+
+If you have a data set that is non-normal, like breath gas data (this is known from prior analysis), or your groups do not have equal variances, and you want to ask a similar question as we asked with the ANOVA (e.g., Does the breath hydrogen differ during week 3 for individuals consuming different supplements?), we need to use a non-parametric test. The non-parametric companion to an ANOVA is the Kruskall-Wallace test. 
+
+```{r}
+# import methane data 
+breath_wide <- read_delim("raw_data/breath_wide.txt", 
+                        delim = "\t", col_names = TRUE, trim_ws = TRUE, na = c("NA")) %>%
+  filter(semester != "Winter2015",
+         quantity_compliant != "no")
+# plot
+breath_plot <- breath_wide %>%
+  ggplot(aes(x = supplement_consumed, 
+             y = ch4_delta, 
+             color = supplement_consumed)) + 
+  geom_hline(yintercept = 0, linetype = "dashed") + 
+  geom_violin() + 
+  geom_jitter() + 
+  xlab(NULL) + 
+  ylab("Breath methane (ppm)") + 
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+breath_plot
+
+# run the test
+kruskal.test(supplement_consumed ~ ch4_delta, breath_wide)
+```
+
+The interpretation for Kruskall-Wallace is similar to an ANOVA; small p-value indicates at least one group is different from the others. 
+
+
+# Two continous variables
+
+Correlations are used to determine if there is a relationship between two continuous variables. For the questions we are interested in, determining if there is a monotonic (or linear) relationship will provide insight. A monotonic relationship would occur when both continuous variables increase or decrease simultaneously, or when one variable increases the other decreases. 
+
+To test correlations in this course, we are going to use the best practice approach of linear models (lm). However there are other correlation tests commonly used that you may encounter elsewhere; Pearson which is parametric and Spearman Rank with is non-parametric. These tests have assumptions which are easy to violate, and the statistics provided (p and R values) do not have a straightfoward interpretation.
+
+Import the data frame below. This file contains abundance data of the bacterial communities of each sample from Bio173 students. Numbers in the `relative_abundance` column represent the weekly average of relative abundance of each sequence variant found in one sample (# sequences for each tax_id) / (total sequences per sample) for each participant. The `tax_id` column is a number assigned to a sequence during the sequence processing pipeline. The `tax_name` is the most likely identity of each sequence. Information regarding microbial metabolism is in the `category` column:
+
+* RS_degraders = Resistant starch degrading specialists (Bifidobacterium + Ruminococcus bromii)
+* butyrogen_focused = A focused list of the most common / canonical butyrogens
+* butyrogen_flint = A broader list of butyrogenic organisms (information comes from Harry Flint's research)
+* hydrogen_consumers = Hydrogen consumers
+* hydrogen_gen = Hydrogen generators
+* propionate_gen = Propionate generators (essentially Bacteroides)
+
+```{r}
+tax_scfa <- read_delim("raw_data/tax_scfa.txt", 
+                        delim = "\t", col_names = TRUE, trim_ws = TRUE, na = c("NA")) %>%
+  filter(semester != "Winter2015",
+         quantity_compliant != "no")
+```
+
+
+### Plot 2 continuous variables
+
+To plot two continuous variables we will use a combination of geom_point() and geom_smooth(). Review the help pages for each of these functions to learn how you can modifiy their appearance (color, size, shape, etc.).
+```{r}
+tax_scfa_plot <- tax_scfa %>%
+  drop_na() %>% 
+  filter(category == "butyrogen_focused",
+         study_week == "week3",
+         supplement_consumed == "LOODAT" | supplement_consumed == "BRMPS",
+         relative_abundance > 0.001) %>% 
+  ggplot(aes(x = butyrate_mean,
+             y = relative_abundance)) + 
+  geom_point() + #puts data points to match x and y coordinates
+  geom_smooth(method = "lm", #used to create a linear best fit line
+              se = FALSE) + #hides confidence interval around line 
+  xlab("Week 3 mean butyrate (mmol/kg)") + 
+  ylab("Relative abundance") 
+
+tax_scfa_plot
+
+
+
+```
+
+If the plot of two continuous variables appears to be correlated, you can determine if they are actually correlated by building a linear model. 
+
+### Linear models
+
+The linear model function is lm(). The linear models we will use have similar arguments as running an ANOVA. You must have two variables (x and y) in a data frame where each variable is a separate column. To access the results of the model, assign it to a new object. In the example below we will determine if there is a correlation between butyrate concentration and the abundance of some butyrate producing organisms. 
+```{r}
+m1 <- tax_scfa %>%
+  drop_na() %>% 
+  filter(category == "butyrogen_focused",
+         study_week == "week3",
+         supplement_consumed == "LOODAT" | supplement_consumed == "BRMPS",
+         relative_abundance > 0.001) %>%  
+  lm(butyrate_mean ~ relative_abundance, data = .) #test relationship
+summary(m1) #view results 
+```
+
+Look at the p-value in the same line as the F-statistic, this tells us if there is a significant result. This p-value is high (p-value = 0.3811), so we do not have significance. However if it was significant, we would then look at the adjusted R-squared value which indicates the quality of linear fit (higher R-squared is better, ideally a value >= 0.80).
+
+There are numerous examples online of statistically significant correlations, that do not make sense biologically or just logically. Remember a significant result from a correlation does not indicate a causal relationship! Use correlations sparingly, they are best applied when there is a logical connection between the two tested variables (e.g., organisms and the metabolites the produce or consume). 
+
+
+# Two categorical variables 
+
+Another method of determining the effectiveness of different pre-biotic fiber supplements, is to count the frequency of positive results (where a positive result is an increase in SCFA concentration, drop in pH, increase in H2, increase in starch-degrading bacteria abundance, increase in SCFA-producing bacteria abundance, etc.). To answer these types of questions we need to count the number of positive results in each corresponding group, then use prop.test() to determine if the proportion of positive results differs between groups. 
+
+As an example we are going to answer the question, "Does the proportion of butyrate reponses differ between individuals who consumed BRMPS potato (BRMPS) or LOODAT potato supplements?" The proportion test has the following assumptions:
+
+* Random samples (this is met because supplements are randomly assigned)
+* Normally distributed data (verify in same method as a t-test)
+* Independent samples (the two groups in our question are not linked in any way)
+
+### Format data 
+
+Run the code below to subset the for the participants who consumed either of the potato supplements.
+```{r}
+prop_df <- scfa_wide %>%
+  filter(supplement_consumed == "LOODAT" | supplement_consumed == "BRMPS",
+         quantity_compliant != "no",
+         semester != "Winter2015") %>%
+  select(-acetate_delta, -propionate_delta) %>% 
+  add_column(but_status = "-") %>%
+  drop_na()
+```
+
+The weekly differences (delta values) will be used to determine a positive result. The code below takes the delta abundance value, and any value greater then 0 is coded as "positive", and values less than 0 are coded as negative. Values, equalities, and assigned categories can all be modified to suit the needs of the research question. 
+```{r}
+prop_df$but_status[prop_df$butyrate_delta > 0] <- "positive"
+prop_df$but_status[prop_df$butyrate_delta < 0] <- "negative"
+```
+
+### Proportion test
+
+After subsetting the data frame down to the values we are interested in, we have to generate the counts of "positive results". For our research question, a positive result will be any individual with a delta abundance value greater than 0. You already are familiar with group_by() piped to summarise() with n() as an agrument to generate count information. 
+```{r}
+prop_df %>%
+  group_by(supplement_consumed, but_status) %>%
+  summarise(Counts = n())
+```
+
+Another option is the table() function to determine counts. Both will generate the same information.
+```{r}
+prop_tab <- with(prop_df, table(supplement_consumed, but_status))
+```
+
+Review the help page for prop.test(), few things to note: the order of arguments is important, and the function expects vectors as input. 
+```{r}
+prop.test(prop_tab, 
+          alternative = "two.sided",
+          correct = FALSE)
+```
+
+The resulting large p-value can be interpreted as: there is no difference in the proportion of butyrate reponse between these supplement types. 
+
+### Plot
+
+As indicated in the ggplot graphing cheatsheet there is one recommended plot type for proportions, however these type of data are actually best represented in a table. In a table you can put the observed frequencies, or convert the frequenices to a proportion (0.0 - 1.0) or percentage (0% - 100%). The text below will generate a table in any rendered Rmarkdown documents. See the Rmarkdown cheatsheet for options on formatting tables. 
+
+To render the document:
+
+* Complete all the code in the entire Rmd document (each code chunk runs without any errors) 
+* Select the "Knit to HTML" option under the Knit icon
+* View the result and make adjustments
+
+| | Increased butyrate | Total participants | Percent increase |
+|:-----:|:-----:|:-----:|:-----:|
+| BRMPS | 76 | 120 | 63.3% |
+| LOODAT | 10 | 16 | 62.5% | 
+
+Based on the numbers presented in this table, does the non-signifcant result make sense? Yes because the percent increase between BRMPS and LOODAT is minimal. 
+
+# Save results
+
+Remember to save any plots generated to a figures directory, and any new data frames to a curated_data directory.
+```{r}
+write_delim(prop_df, path = "curated_data/butyrate_prop_data.txt", delim = "\t")# save final data frame
+save_plot(breath_plot, ncol = 1, nrow = 1, filename = "figures/breath_plot.pdf")
+
+write_delim(scfa_wide, path = "curated_data/scfa_data.txt", delim = "\t")
+save_plot(tax_scfa_plot, ncol=1, nrow=1, filename = "figures/tax_scfa_plot.pdf")
+save_plot(scfa_plot, ncol = 1, nrow = 1, filename = "figures/scfa_plot.pdf")
+write_delim(breath_wide, path = "curated_data/breath_data.txt", delim = "\t")
+```
+
+
+-----
+end
