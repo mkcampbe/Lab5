@@ -1,0 +1,123 @@
+---
+title: "Homework 5"
+author: "Kristi Gdanetz MacCready"
+date: "02/05/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "~/Documents/UMBio201/Lab5/")
+```
+
+# Load packages
+```{r Load packages, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+library(tidyverse)
+library(readxl)
+library(broom)
+library(cowplot)
+set.seed(7)
+```
+
+Save any data frames generated to curated_data directory, save all plots to figures directory. Include any statistics (p- or R-values) as comments after the tests. Based on assumptions, clearly state which statistical test will be used and why. 
+
+# Question 1
+
+Use the SCFA wide dataframe from Lab 5. Check assumptions, conduct statistical tests, make a plot, to answer the question, "Which supplement causes the greatest increase in acetate concentrations?"
+```{r}
+# import and filter data set (q1_df)
+```
+
+```{r}
+# check assumptions
+```
+
+```{r}
+# conduct statistical test
+```
+
+```{r}
+# make and save plot (q1_plot)
+```
+
+What are your conclusions regarding the reseach question? 
+
+<type answer here>
+
+
+# Question 2
+
+Use the SCFA wide dataframe from Lab 5. Check assumptions, conduct statistical tests, make a plot, to answer the question, "Which supplement causes the greatest increase in propionate concentrations?"
+```{r}
+# import and filter data set (q2_df)
+```
+
+```{r}
+# check assumptions
+```
+
+```{r}
+# conduct statistical test
+```
+
+```{r}
+# make and save plot (q2_plot)
+```
+
+What are your conclusions regarding the reseach question?
+
+<type answer here>
+
+
+# Question 3
+
+Use the SCFA wide dataframe from Lab 5. Subset and filter the data frame, check assumptions, and choose the appropriate statistical tests, and create a plot to answer the following research question: "Does the proportion of acetate reponses differ between individuals who consumed BRMPS potato (BRMPS) or LOODAT potato supplements?"
+
+```{r}
+# import and filter data set (q3_df)
+```
+
+```{r}
+# check assumptions
+```
+
+```{r}
+# conduct statistical test
+```
+
+```{r}
+# make and save plot (q3_plot)
+```
+
+What are your conclusions regarding the reseach question?
+
+<type answer here>
+
+
+# Question 4
+
+Use the SCFA wide dataframe from Lab 5. Subset and filter the data frame, check assumptions, and choose the appropriate statistical tests, and create a plot to answer the following research question: "Does the proportion of propionate reponses differ between individuals who consumed BRMPS potato (BRMPS) or LOODAT potato supplements?"
+
+```{r}
+# import and filter data set (q4_df)
+```
+
+```{r}
+# check assumptions
+```
+
+```{r}
+# conduct statistical test
+```
+
+```{r}
+# make and save plot (q4_plot)
+```
+
+What are your conclusions regarding the reseach question?
+
+<type answer here>
+
+
+-----
+end
