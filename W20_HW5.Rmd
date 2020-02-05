@@ -19,7 +19,7 @@ library(cowplot)
 set.seed(7)
 ```
 
-Save any data frames generated to curated_data directory, save all plots to figures directory. Include any statistics (p- or R-values) as comments after the tests. Based on assumptions, clearly state which statistical test will be used and why. 
+Save any data frames generated to curated_data directory, save all plots to figures directory. Based on assumptions, clearly state which statistical test will be used and why. Include any statistics (p- or R-values) as comments after the tests.
 
 # Question 1
 

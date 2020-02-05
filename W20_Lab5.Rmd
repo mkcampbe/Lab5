@@ -83,13 +83,15 @@ scfa_wide <- read_delim(file = "raw_data/scfa_wide.txt",
          quantity_compliant != "no")
 ```
 
+
 # 1 continuous and multiple categorical variables 
 
 In Lab 3 we discussed the factors influencing data structure (values, sample size, variance, etc.), how to check assumptions for certain statistical tests, how to determine if the differences between two means are likely real, and what to do if your datset does not meet the assumptions when comparing two means (use non-parametric test). 
 
 In the first portion of the lab today we will learn the assumption checking process for comparison of more than 2 means. Then use this information to decide if you will use the parametric (ANOVA) or non-pararmetric (Kruskall-Wallace) test, and learn what to do if either of these tests has a significant result.
 
-# ANOVA
+### ANOVA
+
 As you know, we have more than two starch groups we would like to analyze, last week we focused on one (BRMPS). Instead of doing multiple pairwise comparisons with t-tests (which isn't the best approach because of reasons...) we use an ANOVA, which compares all categorical groups to one another. 
 
 To illustrate when an ANOVA would be useful, use the `Lab5_df` data frame imported above, plot the delta butyrate vs. supplement type. Instead of plotting a week 1 and week 3 value for each participant, these were used to calculate a change in butyrate concentration ([butyrate week3] - [butyrate week 1]) for each participant. We can then compare the delta butyrate for all the supplements. Those supplements which caused a large positive change in butyrate concentration can be determined to be effective at stimulating microbial fermentation. 
@@ -265,6 +267,7 @@ Look at the p-value in the same line as the F-statistic, this tells us if there 
 
 There are numerous examples online of statistically significant correlations, that do not make sense biologically or just logically. Remember a significant result from a correlation does not indicate a causal relationship! Use correlations sparingly, they are best applied when there is a logical connection between the two tested variables (e.g., organisms and the metabolites the produce or consume). 
 
+
 # Two categorical variables 
 
 Another method of determining the effectiveness of different pre-biotic fiber supplements, is to count the frequency of positive results (where a positive result is an increase in SCFA concentration, drop in pH, increase in H2, increase in starch-degrading bacteria abundance, increase in SCFA-producing bacteria abundance, etc.). To answer these types of questions we need to count the number of positive results in each corresponding group, then use prop.test() to determine if the proportion of positive results differs between groups. 
@@ -294,7 +297,6 @@ prop_df$but_status[prop_df$butyrate_delta > 0] <- "positive"
 prop_df$but_status[prop_df$butyrate_delta < 0] <- "negative"
 ```
 
-
 ### Proportion test
 
 After subsetting the data frame down to the values we are interested in, we have to generate the counts of "positive results". For our research question, a positive result will be any individual with a delta abundance value greater than 0. You already are familiar with group_by() piped to summarise() with n() as an agrument to generate count information. 
@@ -307,20 +309,16 @@ prop_df %>%
 Another option is the table() function to determine counts. Both will generate the same information.
 ```{r}
 prop_tab <- with(prop_df, table(supplement_consumed, but_status))
+```
 
+Review the help page for prop.test(), few things to note: the order of arguments is important, and the function expects vectors as input. 
+```{r}
 prop.test(prop_tab, 
           alternative = "two.sided",
           correct = FALSE)
 ```
 
-Review the help page for prop.test(), few things to note: the order of arguments is important, and the function expects vectors as input. 
-```{r eval=FALSE, include=FALSE}
-prop.test(x = x, n = n, p = p, 
-          alternative = "two.sided",
-          correct = FALSE)
-```
-
-* The resulting large p-value can be interpreted as, there is no difference in the proportion of butyrate reponse between these supplement types. 
+The resulting large p-value can be interpreted as: there is no difference in the proportion of butyrate reponse between these supplement types. 
 
 ### Plot
 
@@ -328,7 +326,7 @@ As indicated in the ggplot graphing cheatsheet there is one recommended plot typ
 
 To render the document:
 
-* Complete all the code in the Rmd document (code runs without any errors) 
+* Complete all the code in the entire Rmd document (each code chunk runs without any errors) 
 * Select the "Knit to HTML" option under the Knit icon
 * View the result and make adjustments
 
